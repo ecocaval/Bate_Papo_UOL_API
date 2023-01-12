@@ -7,6 +7,7 @@ import { participantSchema, messageSchema } from '../schemas/schemas.js'
 
 const PORT = 5000
 const app = express()
+let db;
 
 dotenv.config()
 
@@ -18,11 +19,9 @@ app.listen(PORT, () => {
 
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 
-let db;
+const serverWasConnected = await mongoClient.connect()
 
-mongoClient.connect().then(() => {
-    db = mongoClient.db();
-})
+if(serverWasConnected) db = mongoClient.db();
 
 app.post("/participants", async (req, res) => {
 
