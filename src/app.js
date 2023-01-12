@@ -19,9 +19,9 @@ app.listen(PORT, () => {
 
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 
-const serverWasConnected = await mongoClient.connect()
+const dbWasConnected = await mongoClient.connect()
 
-if (serverWasConnected) db = mongoClient.db();
+if (dbWasConnected) db = mongoClient.db();
 
 app.post("/participants", async (req, res) => {
 
