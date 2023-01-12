@@ -1,9 +1,3 @@
-// * FORMATO DO PARTICIPANTE
-// {name: 'João', lastStatus: 12313123}
-
-// * FORMATO DA MENSAGEM
-// {from: 'João', to: 'Todos', text: 'oi galera', type: 'message', time: '20:04:37'}
-
 import express from "express"
 import cors from "cors"
 import dotenv from "dotenv"
@@ -56,6 +50,18 @@ app.post("/participants", async (req, res) => {
         console.log(err)
 
         if(err.isJoi) return res.sendStatus(422)
+
+        return res.sendStatus(500)
+    }
+})
+
+app.get("/participants", async (req, res) => {
+    try {
+        const participants = await db.collection("participants").find().toArray()
+
+        return res.send(participants)
+    } catch(err) {
+        console.log(err)
 
         return res.sendStatus(500)
     }
