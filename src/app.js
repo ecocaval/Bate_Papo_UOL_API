@@ -14,14 +14,14 @@ dotenv.config()
 app.use(cors())
 app.use(express.json())
 app.listen(PORT, () => {
-    console.log(`Initialized server in port ${PORT}`)
+    console.log(`Initialized server: port ${PORT}`)
 })
 
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 
 const serverWasConnected = await mongoClient.connect()
 
-if(serverWasConnected) db = mongoClient.db();
+if (serverWasConnected) db = mongoClient.db();
 
 app.post("/participants", async (req, res) => {
 
@@ -75,9 +75,9 @@ app.post("/messages", async (req, res) => {
 
         const { user } = req.headers
 
-        const userExists = await db.collection("participants").findOne({name: user})
+        const userExists = await db.collection("participants").findOne({ name: user })
 
-        if(!userExists) return res.sendStatus(422)
+        if (!userExists) return res.sendStatus(422)
 
         const messageWasPosted = await db.collection("messages").insertOne({
             from: user,
@@ -85,12 +85,33 @@ app.post("/messages", async (req, res) => {
             time: dayjs(Date.now()).format('HH:mm:ss')
         })
 
-        if(messageWasPosted) return res.sendStatus(201)
+        if (messageWasPosted) return res.sendStatus(201)
 
     } catch (err) {
         console.log(err)
 
-        if(err.isJoi) return res.sendStatus(422)
+        if (err.isJoi) return res.sendStatus(422)
+
+        return res.sendStatus(500)
+    }
+})
+
+app.get("/messages", async (req, res) => {
+
+    try {
+        const { query } = req
+        const { user } = req.headers
+
+        const messagesLimit = Number(query.limit)
+
+        const allMessages = await db.collection("messages").find({ $or: [{ to: user }, { to: "Todos" }] }).toArray()
+
+        if (messagesLimit) return res.send(allMessages.slice(-messagesLimit))
+
+        return res.send(allMessages)
+
+    } catch (err) {
+        console.log(err)
 
         return res.sendStatus(500)
     }
