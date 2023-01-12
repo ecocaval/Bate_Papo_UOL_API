@@ -3,7 +3,7 @@ import cors from "cors"
 import dotenv from "dotenv"
 import { MongoClient } from "mongodb"
 import dayjs from 'dayjs'
-import participantSchema from '../schemas/schemas.js'
+import { participantSchema, messageSchema } from '../schemas/schemas.js'
 
 const PORT = 5000
 const app = express()
@@ -41,7 +41,7 @@ app.post("/participants", async (req, res) => {
             to: 'Todos',
             text: 'entra na sala...',
             type: 'status',
-            time: dayjs(Date.now()).format('h:mm:ss')
+            time: dayjs(Date.now()).format('HH:mm:ss')
         })
 
         return res.sendStatus(201)
@@ -49,19 +49,49 @@ app.post("/participants", async (req, res) => {
     } catch (err) {
         console.log(err)
 
-        if(err.isJoi) return res.sendStatus(422)
+        if (err.isJoi) return res.sendStatus(422)
 
         return res.sendStatus(500)
     }
 })
 
 app.get("/participants", async (req, res) => {
+
     try {
         const participants = await db.collection("participants").find().toArray()
 
         return res.send(participants)
-    } catch(err) {
+    } catch (err) {
         console.log(err)
+
+        return res.sendStatus(500)
+    }
+})
+
+app.post("/messages", async (req, res) => {
+
+    try {
+
+        const message = await messageSchema.validateAsync(req.body)
+
+        const { user } = req.headers
+
+        const userExists = await db.collection("participants").findOne({name: user})
+
+        if(!userExists) return res.sendStatus(422)
+
+        const messageWasPosted = await db.collection("messages").insertOne({
+            from: user,
+            ...message,
+            time: dayjs(Date.now()).format('HH:mm:ss')
+        })
+
+        if(messageWasPosted) return res.sendStatus(201)
+
+    } catch (err) {
+        console.log(err)
+
+        if(err.isJoi) return res.sendStatus(422)
 
         return res.sendStatus(500)
     }
