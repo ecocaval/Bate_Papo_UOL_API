@@ -17,6 +17,8 @@ app.listen(PORT, () => {
     console.log(`Initialized server: port ${PORT}`)
 })
 
+checkInactiveUsers()
+
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 
 const dbWasConnected = await mongoClient.connect()
@@ -122,19 +124,48 @@ app.post("/status", async (req, res) => {
 
         const { user } = req.headers
 
-        const userExists = await db.collection("participants").findOne({name: user})
+        const userExists = await db.collection("participants").findOne({ name: user })
 
-        if(!userExists) return res.sendStatus(404)
+        if (!userExists) return res.sendStatus(404)
 
-        await db.collection("participants").updateOne({name: user},{$set: {lastStatus: Date.now()}}, (_,res) => {
-            console.log(res.result.nModified + " document(s) updated");
-        })
+        await db.collection("participants").updateOne({ name: user }, { $set: { lastStatus: Date.now() } })
 
         return res.sendStatus(200)
 
     } catch (err) {
-        console,log(err)
+        console, log(err)
 
         return res.sendStatus(500)
     }
 })
+
+function checkInactiveUsers() {
+    setInterval(async () => {
+        
+        const timeBottomLimit = Date.now() - 10000
+
+        try {
+            const participants = await db.collection("participants").find().toArray()
+
+            participants.forEach(async (participant) => {
+
+                if (participant.lastStatus < timeBottomLimit) {
+
+                    await db.collection("participants").deleteOne({ _id: ObjectId(participant._id) })
+
+                    await db.collection("messages").insertOne({
+                        from: participant.name, 
+                        to: 'Todos', 
+                        text: 'sai da sala...', 
+                        type: 'status', 
+                        time: dayjs(Date.now()).format('HH:mm:ss')
+                    })
+                }
+            })
+
+        } catch (err) {
+            console.log(err);
+        }
+
+    }, 10000);
+}
