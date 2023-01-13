@@ -4,7 +4,6 @@ import dotenv from "dotenv"
 import { MongoClient, ObjectId } from "mongodb"
 import dayjs from 'dayjs'
 import { participantSchema, messageSchema } from '../schemas/schemas.js'
-import { stripHtml } from "string-strip-html"
 
 const PORT = 5000
 const app = express()
@@ -30,9 +29,7 @@ app.post("/participants", async (req, res) => {
 
     try {
 
-        let participant = await participantSchema.validateAsync(req.body)
-
-        // participant = sanitizeAndTrim(participant)
+        const participant = await participantSchema.validateAsync(req.body)
 
         const usernameInUse = await db.collection("participants").findOne(participant)
 
@@ -40,17 +37,13 @@ app.post("/participants", async (req, res) => {
 
         await db.collection("participants").insertOne({ ...participant, lastStatus: Date.now() })
 
-        let messageToInsert = {
+        await db.collection("messages").insertOne({
             from: participant.name,
             to: 'Todos',
             text: 'entra na sala...',
             type: 'status',
             time: dayjs(Date.now()).format('HH:mm:ss')
-        }
-
-        // messageToInsert = sanitizeAndTrim(messageToInsert)
-
-        await db.collection("messages").insertOne(messageToInsert)
+        })
 
         return res.sendStatus(201)
 
@@ -88,15 +81,11 @@ app.post("/messages", async (req, res) => {
 
         if (!userExists) return res.sendStatus(422)
 
-        let messageToPost = {
+        const messageWasPosted = await db.collection("messages").insertOne({
             from: user,
             ...message,
             time: dayjs(Date.now()).format('HH:mm:ss')
-        }
-
-        // messageToPost = sanitizeAndTrim(messageToPost)
-
-        const messageWasPosted = await db.collection("messages").insertOne(messageToPost)
+        })
 
         if (messageWasPosted) return res.sendStatus(201)
 
@@ -114,16 +103,16 @@ app.get("/messages", async (req, res) => {
     try {
         const { query } = req
         const { user } = req.headers
-
+        
         const allMessages = await db.collection("messages").find({ $or: [{ from: user }, { to: user }, { to: "Todos" }] }).toArray()
-
+        
         if (query.limit) {
             const messagesLimit = Number(query.limit)
 
             if (messagesLimit < 1 || isNaN(messagesLimit)) return res.sendStatus(422)
-
+            
             return res.send([...allMessages].slice(-messagesLimit).reverse())
-        }
+        }        
 
         return res.send([...allMessages].reverse())
 
@@ -178,32 +167,6 @@ app.delete("/messages/:id", async (req, res) => {
     }
 })
 
-app.put("/messages/:id", async (req, res) => {
-
-    try {
-        const message = await messageSchema.validateAsync(req.body)
-        const requestUser = req.headers.user
-        const { id } = req.params
-
-        const messageInDb = await db.collection("messages").findOne({ _id: ObjectId(id) })
-
-        if (!messageInDb) return res.sendStatus(404)
-
-        if (requestUser !== messageInDb.from) return res.sendStatus(401)
-
-        await db.collection("messages").updateOne({ _id: ObjectId(id) }, { $set: { ...message } })
-
-        return res.sendStatus(200)
-
-    } catch (err) {
-        console.log(err);
-
-        if (err.isJoi) return res.sendStatus(422)
-
-        return res.sendStatus(500)
-    }
-})
-
 function checkInactiveUsers() {
     const timeTolerance = 10000 // * in milliseconds
 
@@ -237,13 +200,4 @@ function checkInactiveUsers() {
         }
 
     }, timeTolerance)
-}
-
-function sanitizeAndTrim(obj) {
-
-    for (const [key, value] of Object.entries(obj)) {
-        obj[key] = stripHtml(value).result.trim();
-    }
-
-    return obj;
 }
