@@ -32,7 +32,7 @@ app.post("/participants", async (req, res) => {
 
         let participant = await participantSchema.validateAsync(req.body)
 
-        // participant = sanitizeAndTrim(participant)
+        participant = sanitizeAndTrim(participant)
 
         const usernameInUse = await db.collection("participants").findOne(participant)
 
@@ -48,7 +48,7 @@ app.post("/participants", async (req, res) => {
             time: dayjs(Date.now()).format('HH:mm:ss')
         }
 
-        // messageToInsert = sanitizeAndTrim(messageToInsert)
+        messageToInsert = sanitizeAndTrim(messageToInsert)
 
         await db.collection("messages").insertOne(messageToInsert)
 
@@ -94,7 +94,7 @@ app.post("/messages", async (req, res) => {
             time: dayjs(Date.now()).format('HH:mm:ss')
         }
 
-        // messageToPost = sanitizeAndTrim(messageToPost)
+        messageToPost = sanitizeAndTrim(messageToPost)
 
         const messageWasPosted = await db.collection("messages").insertOne(messageToPost)
 
@@ -232,8 +232,6 @@ function checkInactiveUsers() {
 
         } catch (err) {
             console.log(err)
-
-            return res.sendStatus(500)
         }
 
     }, timeTolerance)
