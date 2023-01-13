@@ -1,7 +1,7 @@
 import express from "express"
 import cors from "cors"
 import dotenv from "dotenv"
-import { MongoClient } from "mongodb"
+import { MongoClient, ObjectId } from "mongodb"
 import dayjs from 'dayjs'
 import { participantSchema, messageSchema } from '../schemas/schemas.js'
 
@@ -112,6 +112,28 @@ app.get("/messages", async (req, res) => {
 
     } catch (err) {
         console.log(err)
+
+        return res.sendStatus(500)
+    }
+})
+
+app.post("/status", async (req, res) => {
+    try {
+
+        const { user } = req.headers
+
+        const userExists = await db.collection("participants").findOne({name: user})
+
+        if(!userExists) return res.sendStatus(404)
+
+        await db.collection("participants").updateOne({name: user},{$set: {lastStatus: Date.now()}}, (_,res) => {
+            console.log(res.result.nModified + " document(s) updated");
+        })
+
+        return res.sendStatus(200)
+
+    } catch (err) {
+        console,log(err)
 
         return res.sendStatus(500)
     }
