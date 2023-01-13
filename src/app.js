@@ -106,7 +106,7 @@ app.get("/messages", async (req, res) => {
 
         const messagesLimit = Number(query.limit)
 
-        const allMessages = await db.collection("messages").find({ $or: [{ to: user }, { to: "Todos" }] }).toArray()
+        const allMessages = await db.collection("messages").find({ $or: [{ from: user }, { to: user }, { to: "Todos" }] }).toArray()
 
         if (messagesLimit) return res.send(allMessages.slice(-messagesLimit))
 
@@ -139,10 +139,35 @@ app.post("/status", async (req, res) => {
     }
 })
 
+app.delete("/messages/:id", async (req, res) => {
+    const requestUser = req.headers.user
+    const { id } = req.params
+
+    try {
+        const message = await db.collection("messages").findOne({ _id: ObjectId(id) })
+
+        if (!message) return res.sendStatus(404)
+
+        if (message.from !== requestUser) return res.sendStatus(401)
+
+        await db.collection("messages").deleteOne({ _id: ObjectId(id) })
+
+        return res.sendStatus(200)
+
+    } catch (err) {
+
+        console.log(err);
+
+        return res.sendStatus(500)
+    }
+})
+
 function checkInactiveUsers() {
+    const timeTolerance = 10000 // * in milliseconds
+
     setInterval(async () => {
-        
-        const timeBottomLimit = Date.now() - 10000
+
+        const timeBottomLimit = Date.now() - timeTolerance
 
         try {
             const participants = await db.collection("participants").find().toArray()
@@ -154,10 +179,10 @@ function checkInactiveUsers() {
                     await db.collection("participants").deleteOne({ _id: ObjectId(participant._id) })
 
                     await db.collection("messages").insertOne({
-                        from: participant.name, 
-                        to: 'Todos', 
-                        text: 'sai da sala...', 
-                        type: 'status', 
+                        from: participant.name,
+                        to: 'Todos',
+                        text: 'sai da sala...',
+                        type: 'status',
                         time: dayjs(Date.now()).format('HH:mm:ss')
                     })
                 }
@@ -167,5 +192,5 @@ function checkInactiveUsers() {
             console.log(err);
         }
 
-    }, 10000);
+    }, timeTolerance);
 }
