@@ -18,7 +18,7 @@ app.listen(PORT, () => {
     console.log(`Initialized server: port ${PORT}`)
 })
 
-checkInactiveUsers()
+// checkInactiveUsers()
 
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 
@@ -32,7 +32,7 @@ app.post("/participants", async (req, res) => {
 
         let participant = await participantSchema.validateAsync(req.body)
 
-        participant = sanitizeAndTrim(participant)
+        // participant = sanitizeAndTrim(participant)
 
         const usernameInUse = await db.collection("participants").findOne(participant)
 
@@ -48,7 +48,7 @@ app.post("/participants", async (req, res) => {
             time: dayjs(Date.now()).format('HH:mm:ss')
         }
 
-        messageToInsert = sanitizeAndTrim(messageToInsert)
+        // messageToInsert = sanitizeAndTrim(messageToInsert)
 
         await db.collection("messages").insertOne(messageToInsert)
 
@@ -94,7 +94,7 @@ app.post("/messages", async (req, res) => {
             time: dayjs(Date.now()).format('HH:mm:ss')
         }
 
-        messageToPost = sanitizeAndTrim(messageToPost)
+        // messageToPost = sanitizeAndTrim(messageToPost)
 
         const messageWasPosted = await db.collection("messages").insertOne(messageToPost)
 
@@ -178,6 +178,32 @@ app.delete("/messages/:id", async (req, res) => {
     }
 })
 
+app.put("/messages/:id", async (req, res) => {
+
+    try {
+        const message = await messageSchema.validateAsync(req.body)
+        const requestUser = req.headers.user
+        const { id } = req.params
+
+        const messageInDb = await db.collection("messages").findOne({ _id: ObjectId(id) })
+
+        if (!messageInDb) return res.sendStatus(404)
+
+        if (requestUser !== messageInDb.from) return res.sendStatus(401)
+
+        await db.collection("messages").updateOne({ _id: ObjectId(id) }, { $set: { ...message } })
+
+        return res.sendStatus(200)
+
+    } catch (err) {
+        console.log(err);
+
+        if (err.isJoi) return res.sendStatus(422)
+
+        return res.sendStatus(500)
+    }
+})
+
 function checkInactiveUsers() {
     const timeTolerance = 10000 // * in milliseconds
 
@@ -213,11 +239,11 @@ function checkInactiveUsers() {
     }, timeTolerance)
 }
 
-function sanitizeAndTrim(obj) {
+// function sanitizeAndTrim(obj) {
 
-    for (const [key, value] of Object.entries(obj)) {
-        obj[key] = stripHtml(value).result.trim();
-    }
+//     for (const [key, value] of Object.entries(obj)) {
+//         obj[key] = stripHtml(value).result.trim();
+//     }
 
-    return obj;
-}
+//     return obj;
+// }
