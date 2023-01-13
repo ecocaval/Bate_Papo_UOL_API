@@ -103,12 +103,16 @@ app.get("/messages", async (req, res) => {
     try {
         const { query } = req
         const { user } = req.headers
-
-        const messagesLimit = Number(query.limit)
-
+        
         const allMessages = await db.collection("messages").find({ $or: [{ from: user }, { to: user }, { to: "Todos" }] }).toArray()
+        
+        if (query.limit) {
+            const messagesLimit = Number(query.limit)
 
-        if (messagesLimit) return res.send(allMessages.slice(-messagesLimit))
+            if (messagesLimit < 1 || isNaN(messagesLimit)) return res.sendStatus(422)
+            
+            return res.send(allMessages.slice(-messagesLimit))
+        }        
 
         return res.send(allMessages)
 
@@ -120,6 +124,7 @@ app.get("/messages", async (req, res) => {
 })
 
 app.post("/status", async (req, res) => {
+    
     try {
 
         const { user } = req.headers
