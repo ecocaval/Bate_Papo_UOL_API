@@ -7,7 +7,7 @@ import { participantSchema, messageSchema } from '../schemas/schemas.js'
 
 const PORT = 5000
 const app = express()
-let db;
+let db
 
 dotenv.config()
 
@@ -23,7 +23,7 @@ const mongoClient = new MongoClient(process.env.DATABASE_URL)
 
 const dbWasConnected = await mongoClient.connect()
 
-if (dbWasConnected) db = mongoClient.db();
+if (dbWasConnected) db = mongoClient.db()
 
 app.post("/participants", async (req, res) => {
 
@@ -114,7 +114,7 @@ app.get("/messages", async (req, res) => {
             return res.send(allMessages.slice(-messagesLimit))
         }        
 
-        return res.send(allMessages)
+        return res.send([...allMessages].reverse())
 
     } catch (err) {
         console.log(err)
@@ -124,7 +124,7 @@ app.get("/messages", async (req, res) => {
 })
 
 app.post("/status", async (req, res) => {
-    
+
     try {
 
         const { user } = req.headers
@@ -161,7 +161,7 @@ app.delete("/messages/:id", async (req, res) => {
 
     } catch (err) {
 
-        console.log(err);
+        console.log(err)
 
         return res.sendStatus(500)
     }
@@ -194,8 +194,10 @@ function checkInactiveUsers() {
             })
 
         } catch (err) {
-            console.log(err);
+            console.log(err)
+
+            return res.sendStatus(500)
         }
 
-    }, timeTolerance);
+    }, timeTolerance)
 }
