@@ -110,8 +110,10 @@ app.get("/messages", async (req, res) => {
             const messagesLimit = Number(query.limit)
 
             if (messagesLimit < 1 || isNaN(messagesLimit)) return res.sendStatus(422)
+
+            const slicedMessages = allMessages.slice(-messagesLimit)
             
-            return res.send(allMessages.slice(-messagesLimit))
+            return res.send([...slicedMessages].reverse())
         }        
 
         return res.send([...allMessages].reverse())
