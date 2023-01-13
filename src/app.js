@@ -18,7 +18,7 @@ app.listen(PORT, () => {
     console.log(`Initialized server: port ${PORT}`)
 })
 
-// checkInactiveUsers()
+checkInactiveUsers()
 
 const mongoClient = new MongoClient(process.env.DATABASE_URL)
 
@@ -239,11 +239,11 @@ function checkInactiveUsers() {
     }, timeTolerance)
 }
 
-// function sanitizeAndTrim(obj) {
+function sanitizeAndTrim(obj) {
 
-//     for (const [key, value] of Object.entries(obj)) {
-//         obj[key] = stripHtml(value).result.trim();
-//     }
+    for (const [key, value] of Object.entries(obj)) {
+        obj[key] = stripHtml(value).result.trim();
+    }
 
-//     return obj;
-// }
+    return obj;
+}
