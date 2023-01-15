@@ -30,7 +30,7 @@ app.post("/participants", async (req, res) => {
 
     try {
 
-        let participant = await participantSchema.validateAsync(req.body)
+        let participant = await participantSchema.validateAsync(req.body, {abortEarly: false})
 
         participant = sanitizeAndTrim(participant)
 
@@ -80,7 +80,7 @@ app.post("/messages", async (req, res) => {
 
     try {
 
-        const message = await messageSchema.validateAsync(req.body)
+        const message = await messageSchema.validateAsync(req.body, {abortEarly: false})
 
         const { user } = req.headers
 
@@ -181,7 +181,7 @@ app.delete("/messages/:id", async (req, res) => {
 app.put("/messages/:id", async (req, res) => {
 
     try {
-        const message = await messageSchema.validateAsync(req.body)
+        const message = await messageSchema.validateAsync(req.body, {abortEarly: false})
         const requestUser = req.headers.user
         const { id } = req.params
 
@@ -238,10 +238,16 @@ function checkInactiveUsers() {
 }
 
 function sanitizeAndTrim(obj) {
-
     for (const [key, value] of Object.entries(obj)) {
-        obj[key] = stripHtml(value).result.trim();
-    }
 
+        if (typeof value === "string") {
+        
+            obj[key] = stripHtml(value).result.trim()
+        
+            continue
+        }
+        
+        obj[key] = value
+    }
     return obj;
 }
