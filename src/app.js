@@ -26,6 +26,19 @@ const dbWasConnected = await mongoClient.connect()
 
 if (dbWasConnected) db = mongoClient.db()
 
+app.get("/participants", async (req, res) => {
+
+    try {
+        const participants = await db.collection("participants").find().toArray()
+
+        return res.send(participants)
+    } catch (err) {
+        console.log(err)
+
+        return res.sendStatus(500)
+    }
+})
+
 app.post("/participants", async (req, res) => {
 
     try {
@@ -63,12 +76,24 @@ app.post("/participants", async (req, res) => {
     }
 })
 
-app.get("/participants", async (req, res) => {
+app.get("/messages", async (req, res) => {
 
     try {
-        const participants = await db.collection("participants").find().toArray()
+        const { query } = req
+        const { user } = req.headers
 
-        return res.send(participants)
+        const allMessages = await db.collection("messages").find({ $or: [{ from: user }, { to: user }, { to: "Todos" }] }).toArray()
+
+        if (query.limit) {
+            const messagesLimit = Number(query.limit)
+
+            if (messagesLimit < 1 || isNaN(messagesLimit)) return res.sendStatus(422)
+
+            return res.send([...allMessages].slice(-messagesLimit).reverse())
+        }
+
+        return res.send([...allMessages].reverse())
+
     } catch (err) {
         console.log(err)
 
@@ -109,47 +134,27 @@ app.post("/messages", async (req, res) => {
     }
 })
 
-app.get("/messages", async (req, res) => {
+app.put("/messages/:id", async (req, res) => {
 
     try {
-        const { query } = req
-        const { user } = req.headers
+        const message = await messageSchema.validateAsync(req.body, {abortEarly: false})
+        const requestUser = req.headers.user
+        const { id } = req.params
 
-        const allMessages = await db.collection("messages").find({ $or: [{ from: user }, { to: user }, { to: "Todos" }] }).toArray()
+        const messageInDb = await db.collection("messages").findOne({ _id: ObjectId(id) })
 
-        if (query.limit) {
-            const messagesLimit = Number(query.limit)
+        if (!messageInDb) return res.sendStatus(404)
 
-            if (messagesLimit < 1 || isNaN(messagesLimit)) return res.sendStatus(422)
+        if (requestUser !== messageInDb.from) return res.sendStatus(401)
 
-            return res.send([...allMessages].slice(-messagesLimit).reverse())
-        }
-
-        return res.send([...allMessages].reverse())
-
-    } catch (err) {
-        console.log(err)
-
-        return res.sendStatus(500)
-    }
-})
-
-app.post("/status", async (req, res) => {
-
-    try {
-
-        const { user } = req.headers
-
-        const userExists = await db.collection("participants").findOne({ name: user })
-
-        if (!userExists) return res.sendStatus(404)
-
-        await db.collection("participants").updateOne({ name: user }, { $set: { lastStatus: Date.now() } })
+        await db.collection("messages").updateOne({ _id: ObjectId(id) }, { $set: { ...message } })
 
         return res.sendStatus(200)
 
     } catch (err) {
-        console, log(err)
+        console.log(err);
+
+        if (err.isJoi) return res.sendStatus(422)
 
         return res.sendStatus(500)
     }
@@ -178,27 +183,22 @@ app.delete("/messages/:id", async (req, res) => {
     }
 })
 
-app.put("/messages/:id", async (req, res) => {
+app.post("/status", async (req, res) => {
 
     try {
-        const message = await messageSchema.validateAsync(req.body, {abortEarly: false})
-        const requestUser = req.headers.user
-        const { id } = req.params
 
-        const messageInDb = await db.collection("messages").findOne({ _id: ObjectId(id) })
+        const { user } = req.headers
 
-        if (!messageInDb) return res.sendStatus(404)
+        const userExists = await db.collection("participants").findOne({ name: user })
 
-        if (requestUser !== messageInDb.from) return res.sendStatus(401)
+        if (!userExists) return res.sendStatus(404)
 
-        await db.collection("messages").updateOne({ _id: ObjectId(id) }, { $set: { ...message } })
+        await db.collection("participants").updateOne({ name: user }, { $set: { lastStatus: Date.now() } })
 
         return res.sendStatus(200)
 
     } catch (err) {
-        console.log(err);
-
-        if (err.isJoi) return res.sendStatus(422)
+        console, log(err)
 
         return res.sendStatus(500)
     }
